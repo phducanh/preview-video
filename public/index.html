@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Video Preview Demo</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background: #0f0f0f;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            width: 800px;
+            max-width: 90%;
+        }
+
+        /* Video Player Wrapper */
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            background: black;
+            aspect-ratio: 16/9;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* Custom Controls Area */
+        .controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 50px;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            box-sizing: border-box;
+        }
+
+        /* The Progress Bar Container */
+        .progress-container {
+            position: relative;
+            flex-grow: 1;
+            height: 5px;
+            background: rgba(255,255,255,0.3);
+            cursor: pointer;
+            margin: 0 15px;
+            transition: height 0.1s;
+        }
+
+        .progress-container:hover {
+            height: 8px; /* To hơn khi hover */
+        }
+
+        /* Filled Progress Bar (Red bar) */
+        .progress-filled {
+            height: 100%;
+            background: #f00;
+            width: 0%;
+        }
+
+        /* --- THE PREVIEW BOX (Key Element) --- */
+        .preview-box {
+            position: absolute;
+            bottom: 40px; /* Positioned above the progress bar */
+            
+            /* FIXED DISPLAY SIZE (Standard size for Level 2) */
+            width: 160px; 
+            height: 90px;
+            
+            background-color: #000;
+            border: 2px solid white;
+            border-radius: 4px;
+            display: none; /* Hidden by default */
+            pointer-events: none; /* So the mouse doesn't get stuck on the image */
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            
+            /* CSS Sprite Logic "Magic" */
+            background-repeat: no-repeat;
+        }
+
+        .preview-time {
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px black;
+        }
+
+        /* Settings Panel */
+        .settings {
+            margin-top: 20px;
+            padding: 20px;
+            background: #222;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        select {
+            padding: 5px;
+            font-size: 16px;
+            max-width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1 style="text-align: center;">YouTube Video Preview Demo</h1>
+        <div class="video-wrapper">
+            <video id="myVideo" src="input.mp4" controlsList="nodownload"></video>
+            
+            <!-- Custom UI overlay -->
+            <div class="controls">
+                <button id="playBtn">Play</button>
+                
+                <!-- Progress Bar -->
+                <div class="progress-container" id="progressBar">
+                    <div class="progress-filled" id="progressFilled"></div>
+                    
+                    <!-- Preview Thumbnail Box -->
+                    <div class="preview-box" id="previewBox">
+                        <span class="preview-time" id="previewTime">00:00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="settings">
+            <label>Select Preview Quality (Level): </label>
+            <select id="levelSelect">
+                <option value="0">Loading manifest...</option>
+            </select>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('myVideo');
+        const progressBar = document.getElementById('progressBar');
+        const progressFilled = document.getElementById('progressFilled');
+        const previewBox = document.getElementById('previewBox');
+        const previewTime = document.getElementById('previewTime');
+        const levelSelect = document.getElementById('levelSelect');
+        const playBtn = document.getElementById('playBtn');
+
+        // Define target display size
+        // Regardless of original image size, we force this size on UI
+        const TARGET_WIDTH = 160;
+        const TARGET_HEIGHT = 90;
+
+        let manifest = null;
+        let currentLevel = null;
+
+        // 1. Load configuration from server
+        async function loadManifest() {
+            try {
+                const res = await fetch('manifest.json');
+                manifest = await res.json();
+                
+                // Render options
+                levelSelect.innerHTML = '';
+                manifest.levels.forEach((lvl, index) => {
+                    const opt = document.createElement('option');
+                    opt.value = index;
+                    opt.text = `${lvl.name} (Source: ${lvl.width}x${lvl.height}, Sprite duration: ${lvl.interval}s)`;
+                    levelSelect.appendChild(opt);
+                });
+
+                if (manifest.levels.length > 1) {
+                    levelSelect.value = 1; // Default to Level 2
+                }
+                updateLevel();
+            } catch (e) {
+                console.error("Chưa chạy npm run gen?", e);
+                levelSelect.innerHTML = '<option>Error loading manifest</option>';
+            }
+        }
+
+        function updateLevel() {
+            const idx = parseInt(levelSelect.value);
+            currentLevel = manifest.levels[idx];
+            console.log("Current Spec:", currentLevel);
+            // Do not change previewBox size here anymore
+            // previewBox always fixed size according to CSS (160x90)
+        }
+
+        levelSelect.addEventListener('change', updateLevel);
+
+        // 2. Play/Pause
+        playBtn.addEventListener('click', () => {
+            if (video.paused) {
+                video.play();
+                playBtn.textContent = "Pause";
+            } else {
+                video.pause();
+                playBtn.textContent = "Play";
+            }
+        });
+        video.addEventListener('timeupdate', () => {
+            const percent = (video.currentTime / video.duration) * 100;
+            progressFilled.style.width = percent + '%';
+        });
+
+        // 3. Core logic
+        progressBar.addEventListener('mousemove', (e) => {
+            if (!currentLevel || !video.duration) return;
+
+            // --- A. Calculate time ---
+            const rect = progressBar.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const percent = Math.min(Math.max(x / rect.width, 0), 1);
+            const time = percent * video.duration;
+
+            // --- B. YouTube fake Algorithm  ---
+            const globalIndex = Math.floor(time / currentLevel.interval);
+            const tilesPerSheet = currentLevel.cols * currentLevel.rows;
+            const sheetIndex = Math.floor(globalIndex / tilesPerSheet);
+            
+            const sheetNumber = String(sheetIndex + 1).padStart(3, '0'); 
+            const imageUrl = currentLevel.spriteTemplate.replace('$M', sheetNumber);
+
+            const localIndex = globalIndex % tilesPerSheet;
+            const col = localIndex % currentLevel.cols;
+            const row = Math.floor(localIndex / currentLevel.cols);
+
+            // --- C. Calculate Render ---
+
+            // 1. Calculate Background Position based on Target size
+            // We pretend the sprite image has been resized so each cell is exactly TARGET_WIDTH
+            const bgX = -(col * TARGET_WIDTH);
+            const bgY = -(row * TARGET_HEIGHT);
+            
+            // 2. Calculate Background Size (Most important)
+            // To fit the image into the Target box, we need to scale the entire sprite sheet
+            // Formula: Virtual image size = (Target cell size) * (Number of columns)
+            const totalSheetWidth = TARGET_WIDTH * currentLevel.cols;
+            const totalSheetHeight = TARGET_HEIGHT * currentLevel.rows;
+
+            // --- D. Update UI ---
+            let previewLeft = x - (TARGET_WIDTH / 2);
+            if (previewLeft < 0) previewLeft = 0;
+            if (previewLeft + TARGET_WIDTH > rect.width) previewLeft = rect.width - TARGET_WIDTH;
+
+            previewBox.style.left = previewLeft + 'px';
+            previewBox.style.display = 'block';
+
+            // Apply CSS: Browser will automatically scale the original image (whether 80px or 320px)
+            // to the totalSheetWidth/Height that we calculated.
+            previewBox.style.background = `url('${imageUrl}') ${bgX}px ${bgY}px / ${totalSheetWidth}px ${totalSheetHeight}px`;
+
+            previewTime.textContent = new Date(time * 1000).toISOString().substr(14, 5);
+        });
+
+        progressBar.addEventListener('mouseleave', () => {
+            previewBox.style.display = 'none';
+        });
+
+        progressBar.addEventListener('click', (e) => {
+            const rect = progressBar.getBoundingClientRect();
+            const percent = (e.clientX - rect.left) / rect.width;
+            video.currentTime = percent * video.duration;
+        });
+
+        loadManifest();
+    </script>
+</body>
+</html>

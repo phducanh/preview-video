@@ -1,0 +1,13 @@
+{
+  "name": "youtube-preview-demo",
+  "version": "1.0.0",
+  "description": "YouTube Style Preview Tool",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "gen": "node generate.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

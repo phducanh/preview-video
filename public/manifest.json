@@ -1,0 +1,34 @@
+{
+  "levels": [
+    {
+      "id": "L1",
+      "name": "Low Detail (10x10)",
+      "interval": 5,
+      "width": 80,
+      "cols": 10,
+      "rows": 10,
+      "spriteTemplate": "assets/L1_M$M.jpg",
+      "height": 45
+    },
+    {
+      "id": "L2",
+      "name": "Medium Detail (5x5)",
+      "interval": 5,
+      "width": 160,
+      "cols": 5,
+      "rows": 5,
+      "spriteTemplate": "assets/L2_M$M.jpg",
+      "height": 90
+    },
+    {
+      "id": "L3",
+      "name": "High Detail (3x3)",
+      "interval": 5,
+      "width": 320,
+      "cols": 3,
+      "rows": 3,
+      "spriteTemplate": "assets/L3_M$M.jpg",
+      "height": 180
+    }
+  ]
+}
