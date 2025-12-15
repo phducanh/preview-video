@@ -1,5 +1,5 @@
 {
-  "name": "youtube-preview-demo",
+  "name": "preview-video",
   "version": "1.0.0",
   "description": "YouTube Style Preview Tool",
   "main": "server.js",
